@@ -883,13 +883,20 @@
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
     // size cell based on map size to keep total comfortable
-    let cellSize = 30;
-    if (COLS >= 15) cellSize = 28;
-    if (COLS >= 20) cellSize = 22;
+    // Adaptive cell size: fit board into available viewport width
+    // Account for: body padding (24px), board-container padding (16px), and gaps between cells
+    const containerPadding = 16; // 8px on each side
+    const bodyPadding = 24;      // 12px on each side
+    const gapTotal = (COLS - 1) * 2; // 2px gap between cells
+    const availableWidth = Math.min(window.innerWidth, 720) - bodyPadding - containerPadding - gapTotal;
+    let cellSize = Math.floor(availableWidth / COLS);
+    // Clamp to reasonable bounds
+    if (cellSize < 18) cellSize = 18;   // floor for tappability
+    if (cellSize > 36) cellSize = 36;   // ceiling so it doesn't look silly on desktop
     grid.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + cellSize + 'px)';
 
-    const fontSize = cellSize >= 28 ? 14 : 12;
-    const iconSize = cellSize >= 28 ? 14 : 12;
+    const fontSize = cellSize >= 26 ? 14 : (cellSize >= 20 ? 12 : 10);
+    const iconSize = cellSize >= 26 ? 14 : (cellSize >= 20 ? 12 : 10);
 
     // Build a quick lookup for monsters
     const monsterMap = new Map();
@@ -936,6 +943,11 @@
             if (lavaN > 0) { content = lavaN; contentColor = 'var(--color-lava)'; }
             else { content = '0'; contentColor = 'var(--color-zero)'; }
           }
+          // Exit indicator: shown on top of empty cells (lit), unless walked or flagged
+          if (isExit && !walked[r][c] && v !== 'lava' && flags[r][c] === 0) {
+            bg = 'var(--bg-entrance-exit)';
+            content = '↓'; contentColor = 'var(--color-entrance)';
+          }
           if (!walked[r][c] && flags[r][c] === 1) { content = '⚑'; contentColor = 'var(--color-flag)'; }
           else if (!walked[r][c] && flags[r][c] === 2) { content = '?'; contentColor = 'var(--color-question)'; }
           else if (!walked[r][c] && flags[r][c] === 3) { content = '✓'; contentColor = 'var(--color-check)'; }
@@ -954,6 +966,7 @@
         }
 
         if (inRing && !gameOver) border = '1.5px dashed var(--border-ring)';
+        if (isExit && !walked[r][c] && !gameOver) border = '2px solid #1D9E75';
         if (isPlayer && !gameOver) border = '2px solid var(--border-player)';
         else if (canStep && !gameOver) border = '1.5px solid var(--border-ring)';
 
@@ -1135,6 +1148,17 @@
     const tutId = overlay.dataset.tutId;
     overlay.classList.remove('show');
     if (tutId) markTutorialSeen(tutId);
+  });
+
+  // Re-render on viewport resize (rotation, window resize) — only if game screen is active
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (document.getElementById('game-screen').style.display === 'flex' && currentLevel) {
+        render();
+      }
+    }, 150);
   });
 
   renderLevelSelect();
