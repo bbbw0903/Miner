@@ -76,6 +76,91 @@
   button:active { transform: scale(0.98); }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  .mode-btn {
+    padding: 8px 18px;
+    font-size: 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-dark);
+    background: var(--bg-board);
+    color: var(--text-tertiary);
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-page);
+    border-color: var(--text-primary);
+  }
+  .mode-btn:hover:not(.active) {
+    background: #3a3a37;
+    color: var(--text-secondary);
+  }
+
+  /* Tutorial modal */
+  #tutorial-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #tutorial-overlay.show { display: flex; }
+  #tutorial-card {
+    background: #25251F;
+    border: 1px solid var(--border-dark);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 14px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  #tutorial-card h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 500;
+  }
+  #tutorial-card .tut-item {
+    margin-bottom: 12px;
+  }
+  #tutorial-card .tut-icon {
+    display: inline-block;
+    margin-right: 6px;
+  }
+  #tutorial-card .tut-key {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  #tutorial-card .tut-body {
+    color: var(--text-secondary);
+    margin-top: 2px;
+    padding-left: 22px;
+    font-size: 13px;
+  }
+  #tutorial-card .tut-highlight-red { color: #F09595; font-weight: 500; }
+  #tutorial-card .tut-highlight-amber { color: #FAC775; font-weight: 500; }
+  #tutorial-card .tut-highlight-lava { color: #F09595; font-weight: 500; }
+  #tutorial-card .tut-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    font-size: 15px;
+    background: var(--text-primary);
+    color: var(--bg-page);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  #tutorial-card .tut-btn:hover {
+    background: #FAC775;
+  }
+
   /* ----- Level select screen ----- */
   #level-select {
     max-width: 560px;
@@ -245,8 +330,22 @@
     <div id="grid"></div>
   </div>
 
+  <div id="mode-bar" style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+    <button id="mode-move-btn" class="mode-btn active">🚶 移动</button>
+    <button id="mode-flag-btn" class="mode-btn">⚑ 标记</button>
+  </div>
+
   <div class="legend" id="legend-text">
     <div><strong>左键</strong> 相邻格 = 移动 · <strong>右键</strong> 任意格 = 标记（无 → 旗 → 问号 → 勾 → 无）</div>
+  </div>
+</div>
+
+<!-- Tutorial modal -->
+<div id="tutorial-overlay">
+  <div id="tutorial-card">
+    <h2 id="tutorial-title">教程</h2>
+    <div id="tutorial-items"></div>
+    <button class="tut-btn" id="tutorial-close-btn">开始挑战</button>
   </div>
 </div>
 
@@ -335,6 +434,37 @@
   ];
 
   // ============================================================
+  // Tutorial config
+  // ============================================================
+  // Each tutorial: id (unique), levelId (when to trigger), title, items[]
+  // items: { icon, key, body (HTML allowed) }
+  const TUTORIALS = [
+    {
+      id: 'intro',
+      levelId: '1-1',
+      title: '欢迎来到矿洞',
+      items: [
+        { icon: '🎯', key: '目标', body: '从顶部入口走到底部出口' },
+        { icon: '🚶', key: '怎么走', body: '点击玩家周围 8 格中的任意一格,移动过去' },
+        { icon: '🔥', key: '危险', body: '地图里藏着 <span class="tut-highlight-lava">岩浆</span>,踩到 = 死' },
+        { icon: '💡', key: '怎么避开岩浆', body: '踩入<span class="tut-highlight-amber">暗格</span>后,会照亮以这格为中心的 3×3 区域。空地上的<span class="tut-highlight-red">红色数字</span>告诉你"以这格为中心的 8 格里有几个岩浆"。通过数字推断岩浆位置,绕开它们' },
+        { icon: '✨', key: '决策圈', body: '<span class="tut-highlight-amber">橙色虚线</span>圈出来的范围是你下一步可能照亮的新区域。踩已照亮的格子只是移动位置,不会照亮新区域' },
+      ],
+    },
+    {
+      id: 'monsters',
+      levelId: '1-2',
+      title: '矿洞深处有怪物',
+      items: [
+        { icon: '👹', key: '怪物登场', body: '从这一关开始,地图里会出现 <span class="tut-highlight-amber">怪物</span>(场上的彩色图标)。碰到怪物 = 死' },
+        { icon: '⏱', key: '它和你同步移动', body: '你每动 1 步,怪物也动 1 步。原地不动等于它也不动——你有充分的时间思考' },
+        { icon: '🧭', key: '不同的怪物行为不同', body: '不同种类的怪物移动规则不一样,玩到时你会发现它们的特点。本关的怪物图标会显示在底部说明里' },
+        { icon: '⛏', key: '镐子', body: '地图上有一把 <span class="tut-highlight-amber">镐子</span>(⛏ 图标)。拾取后,下一次相邻碰到怪物会自动击杀它,镐子消耗。一关只有一把,要不要拿、用在哪只怪物上,自己决定' },
+      ],
+    },
+  ];
+
+  // ============================================================
   // Progress (localStorage)
   // ============================================================
   function getProgress() {
@@ -409,6 +539,7 @@
   let gameOver = false;
   let firstMove = true;
   let steps = 0;
+  let inputMode = 'move'; // 'move' | 'flag'
 
   const MONSTER_ALERT_RANGE = 4;
 
@@ -856,7 +987,13 @@
             '</span>';
         }
         if (canStep) cell.classList.add('can-step');
-        cell.addEventListener('click', ((rr, cc) => () => step(rr, cc))(r, c));
+        cell.addEventListener('click', ((rr, cc) => () => {
+          if (inputMode === 'flag') {
+            cycleFlag(rr, cc);
+          } else {
+            step(rr, cc);
+          }
+        })(r, c));
         cell.addEventListener('contextmenu', ((rr, cc) => (e) => { e.preventDefault(); cycleFlag(rr, cc); })(r, c));
         grid.appendChild(cell);
       }
@@ -884,6 +1021,45 @@
     document.getElementById('game-screen').style.display = 'flex';
     updateLegend();
     resetLevel();
+    // Show tutorial for this level if not seen yet
+    const tut = TUTORIALS.find(t => t.levelId === id);
+    if (tut && !hasSeenTutorial(tut.id)) {
+      showTutorial(tut);
+    }
+  }
+
+  function hasSeenTutorial(tutId) {
+    try {
+      const raw = localStorage.getItem('miner_tutorials_seen_v3');
+      if (!raw) return false;
+      const seen = JSON.parse(raw);
+      return Array.isArray(seen) && seen.includes(tutId);
+    } catch (e) { return false; }
+  }
+  function markTutorialSeen(tutId) {
+    try {
+      const raw = localStorage.getItem('miner_tutorials_seen_v3');
+      const seen = raw ? JSON.parse(raw) : [];
+      if (!seen.includes(tutId)) seen.push(tutId);
+      localStorage.setItem('miner_tutorials_seen_v3', JSON.stringify(seen));
+    } catch (e) {}
+  }
+  function showTutorial(tut) {
+    document.getElementById('tutorial-title').textContent = tut.title;
+    const itemsContainer = document.getElementById('tutorial-items');
+    itemsContainer.innerHTML = '';
+    for (const item of tut.items) {
+      const div = document.createElement('div');
+      div.className = 'tut-item';
+      div.innerHTML =
+        '<span class="tut-icon">' + item.icon + '</span>' +
+        '<span class="tut-key">' + item.key + '</span>' +
+        '<div class="tut-body">' + item.body + '</div>';
+      itemsContainer.appendChild(div);
+    }
+    const overlay = document.getElementById('tutorial-overlay');
+    overlay.dataset.tutId = tut.id;
+    overlay.classList.add('show');
   }
   function resetLevel() {
     makeEmpty();
@@ -893,6 +1069,7 @@
     gameOver = false;
     firstMove = true;
     steps = 0;
+    setMode('move');
     setStatus('点击顶部发光的入口进入。', 'secondary');
     render();
   }
@@ -903,7 +1080,7 @@
   }
   function updateLegend() {
     const legend = document.getElementById('legend-text');
-    let html = '<div><strong>左键</strong> 相邻格 = 移动 · <strong>右键</strong> 任意格 = 标记（无 → 旗 → 问号 → 勾 → 无）</div>';
+    let html = '<div>底部切换 <strong>🚶 移动</strong> / <strong>⚑ 标记</strong> 模式 · 桌面端右键可随时标记</div>';
     html += '<div style="margin-top:6px;">已照亮的格子显示真相 · <span style="color:var(--border-ring);">橙色虚线</span> = 决策圈 · 踩入暗格会照亮新的 3×3 区域</div>';
     if (currentLevel.monsters.length > 0) {
       const typeLabels = {
@@ -935,11 +1112,29 @@
   // ============================================================
   document.getElementById('back-btn').addEventListener('click', backToSelect);
   document.getElementById('reset-btn').addEventListener('click', resetLevel);
+
+  function setMode(mode) {
+    inputMode = mode;
+    document.getElementById('mode-move-btn').classList.toggle('active', mode === 'move');
+    document.getElementById('mode-flag-btn').classList.toggle('active', mode === 'flag');
+  }
+  document.getElementById('mode-move-btn').addEventListener('click', () => setMode('move'));
+  document.getElementById('mode-flag-btn').addEventListener('click', () => setMode('flag'));
   document.getElementById('reset-progress-btn').addEventListener('click', () => {
     if (confirm('确定要清除所有通关进度吗？')) {
-      try { localStorage.removeItem('miner_progress_v3'); } catch (e) {}
+      try {
+        localStorage.removeItem('miner_progress_v3');
+        localStorage.removeItem('miner_tutorials_seen_v3');
+        localStorage.removeItem('miner_tutorial_seen_v3'); // legacy key
+      } catch (e) {}
       renderLevelSelect();
     }
+  });
+  document.getElementById('tutorial-close-btn').addEventListener('click', () => {
+    const overlay = document.getElementById('tutorial-overlay');
+    const tutId = overlay.dataset.tutId;
+    overlay.classList.remove('show');
+    if (tutId) markTutorialSeen(tutId);
   });
 
   renderLevelSelect();
