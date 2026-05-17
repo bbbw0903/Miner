@@ -967,11 +967,16 @@
 
         if (inRing && !gameOver) border = '1.5px dashed var(--border-ring)';
         if (isExit && !walked[r][c] && !gameOver) border = '2px solid #1D9E75';
-        if (isPlayer && !gameOver) border = '2px solid var(--border-player)';
+        if (isPlayer && !gameOver) {
+          border = '3px solid #4A9EFF';
+          bg = '#7FC4F7';
+        }
         else if (canStep && !gameOver) border = '1.5px solid var(--border-ring)';
 
         cell.style.background = bg;
         cell.style.border = border;
+        // Player glow for extra visibility
+        cell.style.boxShadow = (isPlayer && !gameOver) ? '0 0 6px #4A9EFF' : '';
         if (contentColor) {
           cell.innerHTML = '<span style="color: ' + contentColor + ';">' + content + '</span>';
         } else {
